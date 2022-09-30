@@ -1,29 +1,164 @@
-const URL = "https://2u-data-curriculum-team.s3.amazonaws.com/dataviz-classroom/v1.1/14-Interactive-Web-Visualizations/02-Homework/samples.json";
+// SELECT FIELDS & DIVS
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+// FUNCTION #1 of 4
+function buildCharts(patientID) {
+
+    // READ & INTERPRET THE DATA
+    //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    // Read in the JSON data
+    d3.json("samples.json").then((data => {
+
+        // Define samples
+        var samples = data.samples
+        var metadata = data.metadata
+        var filteredMetadata = metadata.filter(bacteriaInfo => bacteriaInfo.id == patientID)[0]
+
+        // Filter by patient ID
+        var filteredSample = samples.filter(bacteriaInfo => bacteriaInfo.id == patientID)[0]
+
+        // Create variables for chart
+        // Grab sample_values for the bar chart
+        var sample_values = filteredSample.sample_values
+
+        // Use otu_ids as the labels for bar chart
+        var otu_ids = filteredSample.otu_ids
+
+        // use otu_labels as the hovertext for bar chart
+        var otu_labels = filteredSample.otu_labels
+
+        // BAR CHART
+        // Create the trace
+        var bar_data = [{
+            // Use otu_ids for the x values
+            x: sample_values.slice(0, 10).reverse(),
+            // Use sample_values for the y values
+            y: otu_ids.slice(0, 10).map(otu_id => `OTU ${otu_id}`).reverse(),
+            // Use otu_labels for the text values
+            text: otu_labels.slice(0, 10).reverse(),
+            type: 'bar',
+            orientation: 'h',
+            marker: {
+                color: 'rgb(0,0,255)'
+            },
+        }]
 
 
-// loading in JSON data and displaying it 
 
-d3.json(URL).then(function(data)) {
-    let metadata = data.metadata;
-    let metaarray = metadata.filter(sampleobject => 
-        sampleobject.id == sample);
-     let results= metaarray[0]   
+        // Display plot
+        Plotly.newPlot('bar', bar_data)
+
+        // BUBBLE CHART
+        // Create the trace
+        var bubble_data = [{
+            // Use otu_ids for the x values
+            x: otu_ids,
+            // Use sample_values for the y values
+            y: sample_values,
+            // Use otu_labels for the text values
+            text: otu_labels,
+            mode: 'markers',
+            marker: {
+                // Use otu_ids for the marker colors
+                color: otu_ids,
+                // Use sample_values for the marker size
+                size: sample_values,
+                colorscale: 'YlOrRd'
+            }
+        }];
 
 
-    
-    
-    
-    
-    
-    
-    console.log(data);
-  }
-  );
+        // Define plot layout
+        var layout = {
+            title: "Belly Button Samples",
+            xaxis: { title: "OTU ID" },
+        };
 
-  //Create a horizontal bar chart with a dropdown menu to display the top 10 OTUs found in that individual
+        // Display plot
+        Plotly.newPlot('bubble', bubble_data, layout)
 
-  let results = URL.filter()
-    
-  
-  
- 
+        // GAUGE CHART
+        // Create variable for washing frequency
+        var washFreq = filteredMetadata.wfreq
+
+        // Create the trace
+        var gauge_data = [
+            {
+                domain: { x: [0, 1], y: [0, 1] },
+                value: washFreq,
+                title: { text: "Belly Button Washing Frequency <br> Scrubs per Week" },
+                type: "indicator",
+                mode: "gauge+number",
+                gauge: {
+                    bar: {color: 'red'},
+                    axis: { range: [null, 9] },
+                    steps: [
+                        { range: [0, 1], color: 'rgb(248, 243, 236)'},
+                        { range: [1, 2], color: 'rgb(155,148,95)'},
+                        { range: [2, 3], color: 'rgb(233, 230, 202)'},
+                        { range: [3, 4], color: 'rgb(78,91,49)' },
+                        { range: [4, 5], color: 'rgb(213, 228, 157)' },
+                        { range: [5, 6], color: 'rgb(0,149,138)' },
+                        { range: [6, 7], color: 'rgb(140, 191, 136)' },
+                        { range: [7, 8], color: 'rgb(0,154,23))' },
+                        { range: [8, 9], color: 'rgb(133, 180, 138)' },
+							
+                    ],
+                    // threshold: {
+                    //     line: { color: "white" },
+                    // }
+                }
+            }
+        ];
+
+        // Define Plot layout
+        var gauge_layout = { width: 500, height: 400, margin: { t: 0, b: 0 } };
+
+        // Display plot
+        Plotly.newPlot('gauge', gauge_data, gauge_layout);
+    }))
+
+
+};
+
+
+// FUNCTION #2 of 4
+function populateDemoInfo(patientID) {
+
+    var demographicInfoBox = d3.select("#sample-metadata");
+
+    d3.json("samples.json").then(data => {
+        var metadata = data.metadata
+        var filteredMetadata = metadata.filter(bacteriaInfo => bacteriaInfo.id == patientID)[0]
+
+        console.log(filteredMetadata)
+        Object.entries(filteredMetadata).forEach(([key, value]) => {
+            demographicInfoBox.append("p").text(`${key}: ${value}`)
+        })
+
+
+    })
+}
+
+// FUNCTION #3 of 4
+function optionChanged(patientID) {
+    console.log(patientID);
+    buildCharts(patientID);
+    populateDemoInfo(patientID);
+}
+
+// FUNCTION #4 of 4
+function initDashboard() {
+    var dropdown = d3.select("#selDataset")
+    d3.json("samples.json").then(data => {
+        var patientIDs = data.names;
+        patientIDs.forEach(patientID => {
+            dropdown.append("option").text(patientID).property("value", patientID)
+        })
+        buildCharts(patientIDs[0]);
+        populateDemoInfo(patientIDs[0]);
+    });
+};
+
+initDashboard();
